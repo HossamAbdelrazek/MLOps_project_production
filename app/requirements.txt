@@ -1,0 +1,16 @@
+alembic
+fastapi==0.115.12
+httpcore
+httpx
+joblib
+kiwisolver
+lightgbm
+numpy
+pandas
+prometheus-fastapi-instrumentator==7.1.0
+prometheus_client==0.22.0
+prompt_toolkit==3.0.51
+pydantic
+scikit-learn
+mediapipe
+opencv-python
