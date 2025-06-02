@@ -6,7 +6,7 @@ import logging
 import joblib
 from typing import List
 import os
-from app.preprocessing.preprocess import predict_gesture
+from preprocessing.preprocess import predict_gesture
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
