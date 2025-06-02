@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import logging
 
 def normalize_hand_landmarks(landmarks):
     """Normalize hand landmarks by centering around (x1, y1) and scaling by (y13)."""
@@ -21,20 +20,23 @@ def normalize_hand_landmarks(landmarks):
     xs_norm = xs_norm / y13
     ys_norm = ys_norm / y13
     
-    # Create feature dictionary (like your DataFrame columns)
+    # Create feature dictionary based on model's expected features
     features = {}
     for i in range(21):
         features[f'x{i+1}'] = xs_norm[i]
         features[f'y{i+1}'] = ys_norm[i]
         features[f'z{i+1}'] = zs[i]
     
-    # Remove x1, y1 (they become 0 after centering, so the model doesn't need them)
+    # Based on model feature names, remove x1 and x2
     features.pop('x1', None)
-    features.pop('y1', None)
+    features.pop('x2', None)
     
-    # Return as ordered array (sorted by feature names for consistency)
-    feature_names = sorted(features.keys())
-    return [features[name] for name in feature_names]
+    # Return features in the exact order the model expects
+    model_feature_order = ['y1', 'z1', 'y2', 'z2']
+    for i in range(3, 22):  # x3 to x21, y3 to y21, z3 to z21
+        model_feature_order.extend([f'x{i}', f'y{i}', f'z{i}'])
+    
+    return [features[name] for name in model_feature_order]
 
 def predict_gesture(model, frame, encoder):
     """
@@ -47,16 +49,27 @@ def predict_gesture(model, frame, encoder):
         # Normalize landmarks
         normalized_features = normalize_hand_landmarks(landmarks)
         
-        # Convert to DataFrame for prediction
-        input_data = pd.DataFrame([normalized_features])
+        # Create feature names in the EXACT order the model expects
+        # Pattern: y1, z1, y2, z2, x3, y3, z3, x4, y4, z4, ..., x21, y21, z21
+        feature_names = ['y1', 'z1', 'y2', 'z2']
+        for i in range(3, 22):  # Points 3 to 21
+            feature_names.extend([f'x{i}', f'y{i}', f'z{i}'])
+        
+        # Convert to DataFrame with proper feature names
+        input_data = pd.DataFrame([normalized_features], columns=feature_names)
         
         # Get predictions and probabilities
-        prediction = model.predict(input_data)
+        predictions = model.predict(input_data)
+        class_probabilities = model.predict_proba(input_data)
         
-        decoded_prediction = encoder.inverse_transform([prediction])
-        logging.info(f"Predicted gesture: {decoded_prediction}")
-        return decoded_prediction
+        prediction = predictions[0]  # This should be a single value, not array
+        confidence = np.max(class_probabilities[0])
+        
+        # Fix encoder input - it expects single value, not array
+        decoded_prediction = encoder.inverse_transform([prediction])[0]
+        return decoded_prediction, confidence
         
     except Exception as e:
         print(f"Error in predict_gesture: {e}")
+        print(f"Model feature names: {model.feature_names_in_ if hasattr(model, 'feature_names_in_') else 'Not available'}")
         return "unknown", 0.0

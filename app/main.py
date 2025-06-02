@@ -65,8 +65,8 @@ async def predict(gesture: GestureInput):
         return None
 
     try:
-        current_prediction, confidence = predict_gesture(model, gesture.data, encoder)
-        logger.info(f"Predicted gesture: {current_prediction}, Confidence: {confidence:.2f}")
+        current_prediction,_ = predict_gesture(model, gesture.data, encoder)
+        logger.info(f"Predicted gesture: {current_prediction}")
         
         # Only return valid gestures, otherwise return None
         if current_prediction in GESTURE_MAPPING:
