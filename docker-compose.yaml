@@ -4,27 +4,58 @@ services:
       context: /home/hossam/Desktop/ITI_AI/Material/MLOps/Project/production/app
       dockerfile: dockerfile
     ports:
-        - 8000:8000
+        - "8080:8080"  # Fixed port mapping to match your app
+    networks:
+      - monitoring
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   prometheus:
     image: prom/prometheus:latest
     ports:
-      - 9090:9090
+      - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
+    networks:
+      - monitoring
+    depends_on:
+      - api
 
   grafana:
     image: grafana/grafana:latest
-    user: "427"
+    user: "472"  # Updated user ID for proper permissions
     depends_on:
       - prometheus
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
+      - grafana-storage:/var/lib/grafana
       - ./monitoring/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./monitoring/dashboard.json:/etc/grafana/provisioning/dashboards/dashboard.json
       - ./monitoring/dashboard.yml:/etc/grafana/provisioning/dashboards/default.yml
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
 volumes:
-  models:
+  grafana-storage:
